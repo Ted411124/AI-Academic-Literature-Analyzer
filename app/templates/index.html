@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ app_name_zh }} | {{ app_name }}</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- 頂部品牌與狀態列 -->
+  <header class="header-bar">
+    <div class="container header-content">
+      <div>
+        <h1 class="brand-title">{{ app_name_zh }}</h1>
+        <p class="brand-subtitle">{{ app_name }} (v{{ version }})</p>
+      </div>
+      <div id="health-status" class="health-status-pill" title="後端連線檢測狀態">
+        <span class="status-dot"></span>
+        <span id="health-status-text">連線中...</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- 系統核心原則標章 -->
+    <section class="guarantees-banner">
+      <div class="badge">🔒 封閉式原文依據 (Zero Hallucination)</div>
+      <div class="badge">📖 實體物理頁碼精確錨定</div>
+      <div class="badge">🌐 原文語言＋繁體中文動態對照</div>
+      <div class="badge">💰 NT$0 零付費硬性保證</div>
+      <div class="badge badge-amber">⚠️ 僅支援數位原生文字型 PDF (不含掃描檔)</div>
+    </section>
+
+    <!-- 步驟一：上傳學術論文 -->
+    <section class="card" id="step-1-card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <span class="step-number">1</span>
+          上傳學術文獻 (Upload Literature)
+        </h2>
+        <span class="chip">步驟 1 / 5</span>
+      </div>
+
+      <!-- 拖曳上傳區塊 -->
+      <div id="upload-dropzone" class="upload-dropzone">
+        <div class="upload-icon">📄</div>
+        <h3 id="upload-file-title" class="upload-title">點擊選擇檔案，或直接將學術論文 PDF 拖曳至此</h3>
+        <p class="upload-desc">系統將使用 PyMuPDF 逐頁解析 1-based 物理頁碼並擷取純文字</p>
+        <input type="file" id="pdf-file-input" accept=".pdf" style="display: none;">
+
+        <div class="file-limits-chips">
+          <span class="chip">單次限傳 1 篇</span>
+          <span class="chip">限制 {{ max_file_size_mb }} MB 以內</span>
+          <span class="chip">最多 {{ max_pages }} 頁</span>
+          <span class="chip">支援語系：英文 / 日文 / 繁中 / 簡中</span>
+        </div>
+      </div>
+
+      <!-- 上傳操作與觸發按鈕列 -->
+      <div id="upload-action-row" class="upload-action-row" style="display: none;">
+        <div id="selected-file-badge" class="selected-file-badge"></div>
+        <button type="button" id="btn-upload-file" class="btn-primary">
+          🚀 開始上傳並擷取文字 (Extract Text)
+        </button>
+      </div>
+
+      <!-- 處理中載入指示條 -->
+      <div id="upload-loading-indicator" class="loading-container" style="display: none;">
+        <div class="spinner"></div>
+        <span class="loading-text">正在上傳 PDF 並依實體頁碼逐頁解析文字，請稍候...</span>
+      </div>
+
+      <!-- 錯誤提示條 -->
+      <div id="upload-error-alert" class="alert-box alert-error" style="display: none;">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-content">
+          <strong id="error-title">上傳失敗</strong>
+          <p id="error-message"></p>
+        </div>
+        <button type="button" class="alert-close" onclick="document.getElementById('upload-error-alert').style.display='none'">&times;</button>
+      </div>
+
+      <!-- 擷取成功結果回饋卡片 -->
+      <div id="upload-success-card" class="success-result-card" style="display: none;">
+        <div class="success-header">
+          <span class="success-badge">✅ 文字擷取成功</span>
+          <span id="res-doc-id" class="doc-id-pill"></span>
+        </div>
+        <div class="meta-stats-grid">
+          <div class="stat-item">
+            <span class="stat-label">原始檔案</span>
+            <strong id="res-filename" class="stat-value"></strong>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">文件總頁數</span>
+            <strong id="res-total-pages" class="stat-value"></strong>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">有效純文字總字數</span>
+            <strong id="res-total-chars" class="stat-value"></strong>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">物理頁碼狀態</span>
+            <strong class="stat-value text-green">1-based 頁碼已錨定</strong>
+          </div>
+        </div>
+
+        <div class="excerpt-preview-box">
+          <span class="excerpt-label">第 1 頁原文摘錄預覽：</span>
+          <blockquote id="res-excerpt" class="excerpt-text"></blockquote>
+        </div>
+
+        <div class="success-footer-note">
+          <span>💡 實體頁碼與原文已暫存就緒，可於步驟二確認標題或直接選擇步驟三分析模式。</span>
+        </div>
+      </div>
+
+      <!-- 示範範例快速載入條 -->
+      <div class="demo-action-bar">
+        <div>
+          <strong style="font-size: 0.85rem; color: var(--primary-navy);">💡 期中展示 / 免消耗額度：</strong>
+          <span style="font-size: 0.8rem; color: var(--text-muted);">一鍵體驗預載之經典英文論文完整分析報告</span>
+        </div>
+        <button type="button" id="btn-load-demo" class="btn-demo">
+          載入示範論文（跨大西洋奴隸貿易）
+        </button>
+      </div>
+
+      <p style="font-size: 0.75rem; color: var(--text-light); margin-top: 10px;">
+        * 隱私提示：本系統採用免費 AI 研發額度，僅供公開發表之學術文獻分析，請勿上傳包含個人隱私或機密之文件。
+      </p>
+    </section>
+
+    <!-- 步驟二：確認文章基本資料 -->
+    <section class="card" id="step-2-card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <span class="step-number">2</span>
+          確認文章基本資料 (Metadata Verification)
+        </h2>
+        <span class="chip">步驟 2 / 5 (可編輯或略過)</span>
+      </div>
+
+      <p style="font-size: 0.825rem; color: var(--text-light); margin-bottom: 16px;">
+        僅以 PDF 前兩頁的有限文字產生待確認候選。請核對原文及頁碼；可修改或略過，基本資料辨識失敗不影響後續流程。
+      </p>
+
+      <div id="metadata-review-status" class="metadata-review-status" role="status" aria-live="polite">尚未辨識</div>
+
+      <div class="form-grid">
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label class="form-label" for="meta-title">論文標題 (Title)</label>
+          <input type="text" id="meta-title" class="form-input" placeholder="PDF 候選標題；可修改">
+          <div id="meta-title-evidence" class="metadata-evidence" hidden></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="meta-authors">作者群 (Authors)</label>
+          <input type="text" id="meta-authors" class="form-input" placeholder="多位作者請以分號分隔">
+          <div id="meta-authors-evidence" class="metadata-evidence" hidden></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="meta-year">出版年份 (Year)</label>
+          <input type="text" id="meta-year" class="form-input" placeholder="PDF 明確標示的年份">
+          <div id="meta-year-evidence" class="metadata-evidence" hidden></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="meta-language">原文語言</label>
+          <select id="meta-language" class="form-input">
+            <option value="">未知／待確認</option>
+            <option value="en">英文</option>
+            <option value="ja">日文</option>
+            <option value="zh-CN">簡體中文</option>
+            <option value="zh-TW">繁體中文</option>
+          </select>
+          <div id="meta-language-evidence" class="metadata-evidence" hidden></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="meta-pages">實體頁數 (Pages)</label>
+          <input type="text" id="meta-pages" class="form-input" placeholder="待解析..." readonly>
+        </div>
+      </div>
+      <div class="metadata-review-actions">
+        <button type="button" id="btn-confirm-metadata" class="btn-primary" disabled>確認基本資料</button>
+        <button type="button" id="btn-skip-metadata" class="btn-secondary" disabled>略過，繼續</button>
+      </div>
+    </section>
+
+    <!-- 步驟三：選擇分析模式 -->
+    <section class="card" id="step-3-card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <span class="step-number">3</span>
+          選擇分析模式 (Select Analysis Mode)
+        </h2>
+        <span class="chip">步驟 3 / 5</span>
+      </div>
+
+      <div class="mode-selection-grid">
+        <!-- 模式 A -->
+        <div id="mode-a-card" class="mode-option-card">
+          <h3 class="mode-title">
+            <span>📚 模式 A：一般文獻分析</span>
+          </h3>
+          <p class="mode-desc">
+            毋須輸入特定主題，客觀全面解構整篇文獻之研究背景、研究目的、研究方法、核心論點、實驗成果與作者限制。
+          </p>
+        </div>
+
+        <!-- 模式 B -->
+        <div id="mode-b-card" class="mode-option-card">
+          <h3 class="mode-title">
+            <span>🎯 模式 B：主題導向分析</span>
+          </h3>
+          <p class="mode-desc">
+            輸入您的報告主題，由 AI 比對論文真實內文判定高度/部分/低度相關，並逐條標示支持該主題之原文依據與頁碼。
+          </p>
+        </div>
+      </div>
+
+      <!-- 模式 B 主題輸入框 -->
+      <div id="topic-input-container" class="topic-input-container">
+        <div class="form-group">
+          <label class="form-label" for="user-topic-input">您的研究報告主題 (Research Topic)：</label>
+          <input type="text" id="user-topic-input" class="form-input" placeholder="例如：大型語言模型在跨語言摘要任務中的幻覺抑制機制...">
+          <span style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;">
+            * 系統將依據論文實質論述進行多維度深度比對，絕非單純之關鍵字比對。
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 步驟四：分析流程狀態進度 -->
+    <section class="card" id="step-4-card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <span class="step-number">4</span>
+          系統分析進度 (Analysis Pipeline)
+        </h2>
+        <span class="chip">步驟 4 / 5</span>
+      </div>
+
+      <p style="font-size: 0.825rem; color: var(--text-light);">
+        為落實防幻覺與長文本保護，系統採用「分段擷取 ＋ 頁碼校驗 ＋ 雙語重構」多重管線：
+      </p>
+
+      <div class="progress-stepper">
+        <div id="step-ind-1" class="stepper-item">1. 物理頁碼解析</div>
+        <div id="step-ind-2" class="stepper-item">2. 語系與章節萃取</div>
+        <div id="step-ind-3" class="stepper-item">3. 封閉式論點校驗</div>
+        <div id="step-ind-4" class="stepper-item">4. 雙語心智圖合成</div>
+      </div>
+
+      <div style="text-align: center; margin-top: 8px;">
+        <button type="button" id="btn-start-analyze" class="btn-primary" disabled>
+          送出分析請求
+        </button>
+        <div id="analysis-request-status" class="analysis-request-status" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- 步驟五：成果預覽與匯出區域雛形 -->
+    <section class="card" id="step-5-card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <span class="step-number">5</span>
+          成果預覽與匯出 (Results & Export)
+        </h2>
+        <span class="chip">步驟 5 / 5</span>
+      </div>
+
+      <div class="results-header-actions">
+        <!-- 分頁切換 -->
+        <div class="tabs-group">
+          <button type="button" id="tab-report-btn" class="tab-btn active">📑 雙語學術分析報告</button>
+          <button type="button" id="tab-mindmap-btn" class="tab-btn">🧠 互動式心智圖 (Markmap)</button>
+        </div>
+
+        <!-- 匯出按鈕群 -->
+        <div class="export-actions">
+          <button id="btn-export-pdf" type="button" class="btn-secondary" title="將當前雙語報告排版輸出為 PDF">
+            ⬇️ 下載 PDF 報告
+          </button>
+          <button id="btn-export-png" type="button" class="btn-secondary" title="將心智圖畫布轉存為高解析度 PNG">
+            🖼️ 下載 PNG 心智圖
+          </button>
+        </div>
+      </div>
+
+      <!-- 報告預覽容器 -->
+      <div id="view-report" class="preview-container">
+        <div class="placeholder-text">
+          <h4 style="color: var(--primary-navy); margin-bottom: 8px;">雙語分析報告預覽區 (雛形)</h4>
+          <p>
+            外語論文將以「左側原文引據 ＋ 右側繁中整理」左右對照呈現，並標註 `[p. X]` 實體頁碼；
+            中文論文則直接以優雅繁體中文單欄呈現，不重複顯示。
+          </p>
+        </div>
+      </div>
+
+      <!-- 心智圖預覽容器 -->
+      <div id="view-mindmap" class="preview-container" style="display: none;">
+        <div class="placeholder-text">
+          <h4 style="color: var(--primary-navy); margin-bottom: 8px;">Markmap 互動式心智圖預覽區 (雛形)</h4>
+          <p>
+            支援以 Markdown 語法即時渲染縮放平移心智圖，涵蓋研究背景、目的、方法、論點與成果。
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 頁尾宣告 -->
+  <footer class="footer-bar">
+    <div class="container">
+      <p><strong>{{ app_name_zh }}</strong> &bull; {{ app_name }}</p>
+      <p style="margin-top: 4px;">恪守封閉領域摘要原則 &bull; 總支出 NT$0 &bull; 無廣告與商業帳單</p>
+      <div class="footer-links">
+        <a class="footer-link" href="https://github.com/Ted411124/AI-Academic-Literature-Analyzer" target="_blank" rel="noopener">GitHub 原始碼庫</a>
+        <a class="footer-link" href="/api/health" target="_blank">健康檢查 (Health API)</a>
+        <a class="footer-link" href="/api/info" target="_blank">系統規格 (System Info)</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/static/js/main.js"></script>
+</body>
+</html>

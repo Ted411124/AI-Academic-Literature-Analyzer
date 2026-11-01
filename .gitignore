@@ -75,3 +75,37 @@ desktop.ini
 *.swp
 *.swo
 *~
+
+# Temporary pytest artifacts from 2026-10-31
+/.b01_pytest_temp_20261031/
+/.b02_pytest_temp_20261031/
+/.b03_pytest_temp_20261031/
+/.b04_pytest_temp_20261031/
+/.b05_pytest_temp_20261031/
+/.b06_pytest_temp_20261031/
+/.b07_memory_pytest_temp_20261031/
+/.b09_payload0_diag_temp_20261031/
+/.b09_pytest_temp_20261031/
+/.b09_regression_powershell_20261031/
+/.b09_regression_pytest_temp_20261031/
+/.b10_pytest_temp_20261031/
+/.b10_regression_powershell_20261031/
+/.full_pytest_powershell_20261031/
+/.phase6a_acceptance_recheck_temp_20261031/
+/.phase6a_acceptance_temp_20261031/
+/.phase6a_final_full_temp_20261031/
+/.phase6a_final_new_temp_20261031/
+/.phase6a_final_related_temp_20261031/
+/.phase6a_full_suite_temp_20261031/
+/.phase6a_new_tests_temp_20261031/
+/.phase6a_related_confirm_temp_20261031/
+/.phase6a_related_recheck_temp_20261031/
+/.phase6a_related_tests_temp_20261031/
+/.phase6a_report_service_temp_20261031/
+/.b09_payload0_diag_stderr_20261031.txt
+/.b09_payload0_diag_stdout_20261031.txt
+
+# Development backup and restore-check files
+*.bak
+*.restore-check
+*.bak*
